@@ -1,5 +1,9 @@
 import { Model } from 'mongoose';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { Product, ProductDocument } from '../schemas/product.schemas';
@@ -29,20 +33,59 @@ export class ProductService {
     return product;
   }
 
-  async create(product: CreateProductDto): Promise<Product> {
-    const createdProduct = new this.productModel(product);
+  async create({ name, price }: CreateProductDto): Promise<Product> {
+    if (!name || !price) {
+      throw new BadRequestException();
+    }
+
+    if (name.length > 100) {
+      throw new BadRequestException(
+        'the name should not be less than 100 characters',
+      );
+    }
+
+    const isNumber = typeof price;
+
+    if (isNumber !== 'number') {
+      throw new BadRequestException('price must be a number');
+    }
+
+    const createdProduct = new this.productModel({ name, price });
     return createdProduct.save();
   }
 
-  async update(id: string, updatedProduct: UpdateProductDto): Promise<Product> {
+  async update(
+    id: string,
+    { name, price }: UpdateProductDto,
+  ): Promise<Product> {
     const product = await this.getById(id);
     if (!product) {
       throw new NotFoundException(`product with id ${id} not found`);
     }
 
-    return this.productModel.findByIdAndUpdate(id, updatedProduct, {
-      new: true,
-    });
+    if (!name || !price) {
+      throw new BadRequestException();
+    }
+
+    if (product.name.length > 100) {
+      throw new BadRequestException(
+        'the name should not be less than 100 characters',
+      );
+    }
+
+    const isNumber = typeof price;
+
+    if (isNumber !== 'number') {
+      throw new BadRequestException('price must be a number');
+    }
+
+    return this.productModel.findByIdAndUpdate(
+      id,
+      { name, price },
+      {
+        new: true,
+      },
+    );
   }
 
   async delete(id: string): Promise<Product> {
